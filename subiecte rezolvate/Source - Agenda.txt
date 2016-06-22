@@ -1,0 +1,254 @@
+#include<iostream>
+#include<fstream>
+#include<string>
+#include<ctime>
+#include<list>
+using namespace std;
+
+// Clasa Pozitie
+
+class Pozitie{
+protected:
+	int ziua;
+	int ora;
+	char explicatie[30];
+public:
+	Pozitie(){
+		ziua=0;
+		ora=-1;
+		strcpy(explicatie,"");}
+	Pozitie(int z, int o, char e[30]){
+		if(z>1 && z<=365){
+			this->ziua=z;
+			if(o>0 && o<24){
+				this->ora=o;
+				strcpy(this->explicatie,e);}
+			else cout<<"Ora poate fi doar intre 0 si 23";}
+		else cout<<"Ziua nu e intre 1 si 365";}
+
+	Pozitie &operator=(Pozitie *p){
+
+		this->ziua=(*p).ziua;
+		this->ora=(*p).ora;
+		strcpy(this->explicatie,(*p).explicatie);
+		return *this;}
+
+	virtual void display(){
+		cout<<endl<<"ziua: "<<this->ziua<<", ora: "<<this->ora<<", explicatie: "<<this->explicatie;}
+
+	friend ostream &operator<<(ostream &, Pozitie *);
+
+	virtual bool operator&(Pozitie *p)=0;
+
+	int operator<(Pozitie *p){
+		if(this->ziua>(*p).ziua)return 0;
+		if(this->ora>(*p).ora)return 0;
+		return 1;}
+
+	int GetZiua()
+	{return this->ziua;}
+
+};
+ostream &operator<<(ostream &out, Pozitie *p){
+	out<<"Se afiseaza elementele";
+	(*p).display();
+	return out;}
+
+//Class ApelTelefonic
+
+class ApelTelefonic:public Pozitie{
+private:
+	char tel[12];
+public:
+	ApelTelefonic(int z, int o, char e[30], char t[12]):Pozitie(z,o,e){
+		strcpy(this->tel,t);}
+	void display()
+	{	this->Pozitie::display();
+		cout<<", tel: "<<tel<<"\n";}
+
+	friend ostream &operator<<(ostream &, ApelTelefonic *);
+	
+	bool operator&(Pozitie *a){
+		ApelTelefonic aux=(ApelTelefonic&)a;
+		bool ok=true;
+		if((this->ziua!=aux.ziua)||(this->ora!=aux.ora)||(this->tel!=aux.tel))
+			ok=false;
+		return ok;}
+};
+ostream &operator<<(ostream &out, ApelTelefonic *a){
+	out<<"Se afiseaza elementele ";
+	(*a).display();
+	return out;}
+
+// Clasa Sedinta
+
+class Sedinta: public Pozitie{
+private:
+	char *tema;
+	int durata;
+public:
+	Sedinta(int z, int o, char e[30], char *t, int d):Pozitie(z,o,e){
+		tema=new char[strlen(t)+1];
+		strcpy(this->tema,t);
+		this->durata=d;}
+	void display()
+	{	this->Pozitie::display();
+		cout<<", tema: "<<tema<<"\n";}
+	friend ostream &operator<<(ostream &, Sedinta*);
+	
+	bool operator&(Pozitie *s){
+		bool ok=true;
+		Sedinta aux=(Sedinta&)s;
+		if((this->ziua!=aux.ziua)||(this->ora!=aux.ora)||(this->durata!=aux.durata))
+			ok=false;
+		return ok;}
+};
+ostream &operator<<(ostream &out, Sedinta *s){
+	out<<"Se afiseaza elementele ";
+	(*s).display();
+	return out;}
+
+class Agenda{
+public:
+	Pozitie *p[100];
+	int dim;
+	Agenda(Pozitie *a[100],int d){
+		this->dim=d;
+		for(int i=0;i<dim;i++)
+			this->p[i]=a[i];
+	}
+
+	Agenda &operator+=(Pozitie *a)
+	{
+		int ok=1;
+		for(int k=0;k<this->dim;k++)
+			if((*p[k])&a)ok=0;
+		if(ok==1)
+		{
+			int i=0;
+			while(i<this->dim && this->p[i]<a)
+					i++;
+			if(i!=this->dim)
+				for(int j=this->dim;j>i;j--)
+					this->p[j]=this->p[j-1];
+			this->p[i]=a;
+			this->dim++;
+			return *this;
+		}
+	}
+
+	Agenda &operator-=(Pozitie *a)
+	{
+		int ok=1;
+		for(int k=0;k<this->dim;k++)
+			if((*p[k])&a)ok=0;
+		if(ok==1)
+		{
+			int i=0;
+			while(i<this->dim && this->p[i]<a)
+					i++;
+			if(i!=this->dim)
+				for(int j=i;j<this->dim;j++)
+					this->p[j]=this->p[j+1];
+			this->dim--;
+			return *this;
+		}
+	}
+
+	friend void operator<<(ofstream &AgendaOut, Agenda *agenda);
+	friend void operator>>(ifstream &AgendaIn, Agenda *agenda);
+
+	void DeFacut(int zi)
+	{
+		for(int i = 0; i<this->dim;i++)
+	if(this->p[i]->GetZiua()==zi)
+		this->p[i]->display();
+	}
+
+	void DeFacut()
+	{time_t timp = time(NULL);
+	tm *ptr_timp = localtime(&timp);
+	for(int i=0; i<this->dim;i++)
+		if(this->p[i]->GetZiua()==ptr_timp->tm_yday+1)
+			this->p[i]->display();
+	cout<<"ziua este"<<ptr_timp->tm_yday+1;
+	}
+
+	
+};
+
+void operator<<(ofstream &AgendaOut, Agenda *agenda)
+{if(!AgendaOut.is_open())
+	cout<<"Fisierul nu s-a deschis!";
+else
+	{
+	AgendaOut.write((char*)&agenda->dim,sizeof(int));
+for(int i=0 ; i<agenda->dim; i++)
+	AgendaOut.write((char*)agenda->p[i],sizeof(Pozitie));
+	}
+}
+
+void operator>>(ifstream &AgendaIn, Agenda *agenda)
+{AgendaIn.read((char*)&agenda->dim,sizeof(int));
+for(int i =0;i<agenda->dim;i++)
+	AgendaIn.read((char*)agenda->p[i],sizeof(Pozitie*));
+}
+
+void main()
+{
+	ApelTelefonic p(123,20,"Apel1","0766345345"),p1(300,23,"Apel2","0656736736"),p2(100,4,"Apel3","0723546245");
+	Sedinta s(28,8,"Sedinta1","Tema1",2);
+	/*if(p<p1)cout<<"da";
+	else cout<<"nu";
+	cout<<p;
+	ApelTelefonic a(123,20,"fafsrgsa","07668266781");
+	cout<<a;
+	Sedinta s(123,20,"fafsrgsa","sdgadg",3);
+	cout<<s;*/
+	Pozitie *pp[2]={&p,&s};
+	Agenda a(pp,2);
+		for(int i=0;i<a.dim;i++)
+		cout<<a.p[i];
+		cout<<endl<<endl;
+	a+=&p2;
+	for(int i=0;i<a.dim;i++)
+		cout<<a.p[i];
+	
+	cout<<endl<<endl;
+	a-=&p2;
+	for(int i=0;i<a.dim;i++)
+		cout<<a.p[i];
+	
+	bool x;
+	x = (p1 & &p2);
+	cout<<endl<<"raspunsul este"<<x;
+
+	//ofstream AgendaOut;
+	//AgendaOut.open("Agenda.bin",std::ofstream::binary | std::ofstream::out);
+
+	//ifstream AgendaIn;
+	//AgendaIn.open("Agenda.bin",std::ofstream::binary | std::ofstream::in);
+
+	//AgendaOut<<&a;
+
+	//Pozitie* pp2[] ={&p,&p};
+	//Agenda a2(pp2,2);
+	//AgendaIn>>&a2;
+	//for(int i=0;i<a2.dim;i++)
+	//	cout<<a2.p[i];
+	
+	a.DeFacut(123);
+	cout<<endl;
+	a.DeFacut();
+	
+	cout<<endl<<endl<<"Afisare apeluri telefonice folosind STL LIST!"<<endl;
+	list <Pozitie*> lstAgenda;
+	lstAgenda.push_back(&p);
+	lstAgenda.push_back(&p1);
+	lstAgenda.push_back(&p2);
+
+	list<Pozitie*>::iterator iterator1;
+	for(iterator1 = lstAgenda.begin();  iterator1 != lstAgenda.end(); iterator1++)
+		cout<<*iterator1<<endl;
+
+}

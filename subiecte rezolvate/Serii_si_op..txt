@@ -1,0 +1,195 @@
+#include<iostream>
+#include<fstream>
+using namespace std;
+
+template <class plm>
+class Serie{
+	char * denumire;
+	double valori[100];
+	int nr;
+	plm* operatii[5];
+	int nrOp;
+public:
+	//friend ostream & operator << (ostream & out, Serie<plm> &temp);
+	Serie(char *d,double v[],int n){
+		denumire=new char[sizeof(d)+1];
+		strcpy(denumire,d);
+		nr=n;
+		for(int i=0; i<n; i++){
+			valori[i]=v[i];
+		}
+		nrOp=0;
+	}
+	Serie(Serie &temp){
+		denumire=new char[sizeof(temp.denumire)+1];
+		strcpy(denumire,temp.denumire);
+		nr=temp.nr;
+		for(int i=0; i<nr; i++){
+			valori[i]=temp.valori[i];
+		}
+		nrOp=0;
+	}
+	/*
+	~Serie(){
+		if(denumire){
+			delete [] denumire;
+		}
+	}
+	*/
+	Serie operator += (double val){
+		valori[nr]=val;
+		nr++;
+		return *this;
+	}
+	/*
+	Serie operator = (Serie &temp){
+		//delete [] denumire;
+		denumire=new char[sizeof(temp.denumire)+1];
+		strcpy(denumire,temp.denumire);
+		nr=temp.nr;
+		for(int i=0; i<nr; i++){
+			valori[i]=temp.valori[i];
+		}
+		return *this;
+	}
+	*/
+	Serie operator + (Serie &temp){
+		Serie<Operatie> ret=*this;
+		int i=nr;
+		int p=0;
+		ret.nr=ret.nr+temp.nr;
+		for(i; i<ret.nr; i++){
+			ret.valori[i]=temp.valori[p];
+			p++;
+		}
+		return ret;
+	}
+	int getNr(){
+		return nr;
+	}
+	int getNrOp(){
+		return nrOp;
+	}
+	char* getDenumire(){
+		return denumire;
+	}
+	double getValoare(int i){
+		return valori[i];
+	}
+	void adaugaOperatie(plm *op){
+		operatii[nrOp]=op;
+		nrOp++;
+	}
+	plm* getOperatie(int i){
+		return operatii[i];
+	}
+};
+
+class Operatie{
+public:
+	virtual double Procesare(Serie<Operatie> *s)=0;
+	virtual char* getDenumire(){
+		return "Operatie";
+	}
+};
+
+class Medie:public Operatie{
+public:
+	double Procesare(Serie<Operatie> *s){
+		float suma=0;
+		for(int i=0; i<s->getNr(); i++){
+			suma=suma+s->getValoare(i);
+		}
+		return suma/s->getNr();
+	}
+	char* getDenumire(){
+		return "Medie";
+	}
+};
+class Suma:public Operatie{
+public:
+	double Procesare(Serie<Operatie> *s){
+		float suma=0;
+		for(int i=0; i<s->getNr(); i++){
+			suma=suma+s->getValoare(i);
+		}
+		return suma;
+	}
+	char* getDenumire(){
+		return "Suma";
+	}
+};
+class Maxim:public Operatie{
+public:
+	double Procesare(Serie<Operatie> *s){
+		float maxim=0;
+		for(int i=0; i<s->getNr(); i++){
+			if(maxim<s->getValoare(i)){
+				maxim=s->getValoare(i);
+			}
+		}
+		return maxim;
+	}
+	char* getDenumire(){
+		return "Maxim";
+	}
+};
+
+
+ostream & operator << (ostream & out, Serie<Operatie> &temp){
+	out<<temp.getDenumire()<<" ";
+	for(int i=0; i<temp.getNr(); i++){
+		out<<temp.getValoare(i)<<" ";
+	}
+	for(int i=0; i<temp.getNrOp(); i++){
+		out<<endl;
+		out<<temp.getOperatie(i)->getDenumire()<<" : "<<temp.getOperatie(i)->Procesare(&temp);
+	}
+	return out;
+}
+
+fstream & operator << (fstream & out, Serie<Operatie> &temp){
+	//out<<"Na belea";
+	out<<"Seria "<<temp.getDenumire()<<": ";
+	for(int i=0; i<temp.getNr(); i++){
+		out<<temp.getValoare(i)<<" ";
+	}
+	if(temp.getNrOp()){
+		out<<"  cu operatiile:";
+	}
+	for(int i=0; i<temp.getNrOp(); i++){
+		out<<endl;
+		out<<temp.getOperatie(i)->getDenumire()<<" : "<<temp.getOperatie(i)->Procesare(&temp);
+	}
+	out<<endl;
+	return out;
+}
+
+void main(){
+	double valori[]={4.5,6,3,8,7,8};
+	double val2[]={1,2,3};
+	Serie<Operatie> s("vanzari",valori,6);
+	Serie<Operatie> test("test",val2,3);
+	s+=6.3;
+	Serie<Operatie> s2=s;
+	s2=s+s2;
+	//s=s+test;
+	//cout<<s<<endl;
+	Medie m;
+	Suma suma;
+	Maxim maxim;
+	Suma suma2;
+	/*
+	cout<<m.getDenumire()<<" : "<<m.Procesare(&s)<<endl;
+	cout<<suma.getDenumire()<<" : "<<suma.Procesare(&s)<<endl;
+	cout<<maxim.getDenumire()<<" : "<<maxim.Procesare(&s)<<endl;
+	*/
+	s.adaugaOperatie(&m);
+	s.adaugaOperatie(&suma);
+	s.adaugaOperatie(&maxim);
+	test.adaugaOperatie(&suma2);
+	//cout<<s<<endl;
+	fstream fis("serii.txt",ios::out);
+	fis<<s<<test;
+	fis.close();
+}

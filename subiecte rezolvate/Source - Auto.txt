@@ -1,0 +1,182 @@
+#include<iostream>
+#include<fstream>
+#include<map>
+
+using namespace std;
+
+class Auto
+{private:
+float Pret;
+protected:
+	int IdAuto;
+	char Marca[30];
+public:
+	Auto()
+	{this->IdAuto = 1000;
+	strcpy(this->Marca,"Dacia");
+	this->Pret=3000;}
+
+	Auto(int id, char* marca, float pret)
+	{this->IdAuto=id;
+	strcpy(this->Marca,marca);
+	this->Pret=pret;}
+
+	float GetPret()
+	{return this->Pret;}
+
+	void SetPret(float pret)
+	{this->Pret = pret;}
+
+	int GetIdAuto()
+	{return this->IdAuto;}
+
+	char* GetMarca()
+	{return this->Marca;}
+	
+	friend ostream &operator <<(ostream &out, Auto & masina);
+	friend void operator <<(ofstream &AutoOut, Auto & masina);
+	friend void operator >>(ifstream &AutoIn, Auto & masina);
+};
+
+ostream & operator <<(ostream &out, Auto & masina)
+{out<<endl<<"Masina marca: "<<masina.Marca<<" cu id-ul: "<<masina.IdAuto<<" are pretul: "<<masina.GetPret();
+return out;}
+
+void operator <<(ofstream &AutoOut, Auto & masina)
+{float pret = masina.GetPret();
+	AutoOut.write((char*)&masina.IdAuto,sizeof(int));
+AutoOut.write((char*)masina.Marca,sizeof(masina.Marca));
+AutoOut.write((char*)&pret,sizeof(float));
+}
+
+void operator >>(ifstream &AutoIn, Auto & masina)
+{AutoIn.read((char*)&masina.IdAuto,sizeof(int));
+AutoIn.read(masina.Marca,sizeof(masina.Marca));
+AutoIn.read((char*)&masina.Pret,sizeof(float));}
+
+
+
+
+class Pers
+{protected:
+int IdPers;
+char Nume[30];
+
+public:
+	Auto* pAuto;
+	int idAuto;
+	Pers()
+	{this->IdPers=1000;
+	strcpy(this->Nume,"Anonim");
+	this->pAuto = NULL;
+	this->idAuto = 0;}
+
+	Pers(int id, char* nume)
+	{this->IdPers = id;
+	strcpy(this->Nume,nume);
+	this->pAuto = NULL;
+	this->idAuto = 0;}
+
+	void operator<<(Auto & masina)
+	{this->pAuto = &masina;
+	this->idAuto = masina.GetIdAuto();}
+
+	char* GetNume()
+	{return this->Nume;}
+
+	friend ostream &operator <<(ostream & out, Pers & persoana);
+	friend void operator <<(ofstream & PersOut, Pers & persoana);
+	friend void operator >>(ifstream & PersIn, Pers & persoana);
+};
+
+
+ostream &operator <<(ostream & out, Pers & persoana)
+{if(persoana.pAuto)
+	out<<endl<<"Persoana "<<persoana.Nume<<" cu id-ul: "<<persoana.IdPers<<" are o masina marca: "<<persoana.pAuto->GetMarca()<<" cu id-ul: "<<persoana.idAuto<<" care a costat: "<<persoana.pAuto->GetPret();
+else
+	out<<endl<<"Persoana "<<persoana.Nume<<" cu id-ul: "<<persoana.IdPers<<" nu are masina!";
+return out;}
+
+void operator <<(ofstream & PersOut, Pers & persoana)
+{PersOut.write((char*)&persoana.IdPers,sizeof(int));
+PersOut.write((char*)persoana.Nume,sizeof(persoana.Nume));
+PersOut.write((char*)&persoana.idAuto,sizeof(int));
+}
+
+void operator >>(ifstream & PersIn, Pers & persoana)
+{PersIn.read((char*)&persoana.IdPers,sizeof(int));
+PersIn.read((char*)persoana.Nume,sizeof(persoana.Nume));
+PersIn.read((char*)&persoana.idAuto,sizeof(int));}
+
+bool operator > (Pers & persoana, Auto &  masina)
+{if(persoana.pAuto->GetPret()>masina.GetPret())
+return true;
+else
+	return false;}
+
+bool operator > (Pers & persoana, Pers & persoana2)
+{if(persoana.pAuto->GetPret()>persoana2.pAuto->GetPret())
+return true;
+else
+	return false;}
+
+
+void main()
+{Pers p1(123,"Popescu"),p2,p3,p4;
+Auto a1(1001,"Fiat",6000),a2,a3,a4;
+p1<<a1;
+p2<<a2;
+cout<<a1;
+cout<<p1<<p2;
+
+if(p1>a2)
+	cout<<endl<<p1.GetNume()<<" are o masina mai scumpa decat "<<a2.GetMarca();
+else
+	cout<<endl<<p1.GetNume()<<" are o masina mai ieftina decat "<<a2.GetMarca();
+
+if(p1>p2)
+	cout<<endl<<p1.GetNume()<<" are o masina mai scumpa decat "<<p2.GetNume();
+else
+	cout<<endl<<p1.GetNume()<<" are o masina mai ieftina decat "<<p2.GetNume();
+
+ofstream AutoOut;
+AutoOut.open("Auto.dat",std::ofstream::binary | std::ofstream::out);
+AutoOut<<a1;
+AutoOut<<a2;
+AutoOut.close();
+
+ofstream PersOut;
+PersOut.open("Pers.dat",std::ofstream::binary | std::ofstream::out);
+PersOut<<p1;
+PersOut<<p2;
+PersOut.close();
+
+ifstream AutoIn;
+AutoIn.open("Auto.dat",std::ifstream::binary | std::ifstream::in);
+AutoIn>>a3;
+AutoIn>>a4;
+AutoIn.close();
+
+
+ifstream PersIn;
+PersIn.open("Pers.dat",std::ifstream::binary | std::ifstream::in);
+PersIn>>p3;
+PersIn>>p4;
+PersIn.close();
+cout<<a3<<a4;
+cout<<p3<<p4;
+
+map<int,Auto> parcAuto;
+parcAuto.insert(pair<int,Auto>(a3.GetIdAuto(),a3));
+parcAuto.insert(pair<int,Auto>(a4.GetIdAuto(),a4));
+
+
+map<int,Auto>::iterator iterator1;
+iterator1=parcAuto.find(p3.idAuto);
+p3.pAuto = &(iterator1->second);
+
+iterator1=parcAuto.find(p4.idAuto);
+p4.pAuto = &(iterator1->second);
+
+cout<<p3<<p4;
+}
